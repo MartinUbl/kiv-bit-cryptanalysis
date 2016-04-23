@@ -8,8 +8,7 @@
 
 SolveManager::SolveManager()
 {
-    m_currentCipher = CT_NONE;
-    m_currentCounter = 0;
+    //
 }
 
 int SolveManager::Run(int argc, char** argv)
@@ -34,6 +33,12 @@ int SolveManager::Run(int argc, char** argv)
     m_dataLoader.SetLanguageFile("cs_words");
     m_dataLoader.LoadWords();
 
+    for (int i = 0; i < MAX_CIPHER_TYPE; i++)
+    {
+        for (int j = 0; j < _solverCounts[i]; j++)
+            m_workToDo.push((CipherType)i);
+    }
+
     srand((unsigned int)time(nullptr));
 
     if (!sDaemonManager->LoadDaemons())
@@ -52,7 +57,7 @@ int SolveManager::Run(int argc, char** argv)
 
     cout << "Waiting for clients..." << endl;
 
-    while (m_currentCipher != MAX_CIPHER_TYPE)
+    while (!m_workToDo.empty() || !m_workInProgress.empty())
     {
         sSessionManager->Update();
     }
@@ -71,8 +76,6 @@ int SolveManager::Run(int argc, char** argv)
 
     cout << "Most suitable score: " << suitScore << endl << suitable.c_str() << endl;
 
-    cin.get();
-
     return 0;
 }
 
@@ -88,22 +91,25 @@ string SolveManager::getMessage()
 
 CipherType SolveManager::getWork()
 {
-    while (m_currentCipher != MAX_CIPHER_TYPE)
-    {
-        while (m_currentCounter >= _solverCounts[m_currentCipher])
-        {
-            m_currentCounter = 0;
-            m_currentCipher = (CipherType)(m_currentCipher + 1);
+    if (m_workToDo.empty())
+        return CT_NONE;
 
-            if (m_currentCipher == MAX_CIPHER_TYPE)
-                return CT_NONE;
-        }
+    CipherType work = m_workToDo.front();
+    m_workToDo.pop();
+    m_workInProgress.insert(work);
 
-        m_currentCounter++;
-        return m_currentCipher;
-    }
+    return work;
+}
 
-    return CT_NONE;
+void SolveManager::returnWork(CipherType undoneWork)
+{
+    m_workToDo.push(undoneWork);
+    m_workInProgress.erase(undoneWork);
+}
+
+void SolveManager::finishWork(CipherType doneWork)
+{
+    m_workInProgress.erase(doneWork);
 }
 
 void SolveManager::AddClientResult(float freqScore, float dictScore, const char* result)

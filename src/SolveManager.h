@@ -4,6 +4,9 @@
 #include "Singleton.h"
 #include "SolveEnums.h"
 
+#include <queue>
+#include <set>
+
 #define ALPHABET_SIZE 26
 
 static uint32_t _solverCounts[MAX_CIPHER_TYPE] = {
@@ -50,6 +53,8 @@ class SolveManager
         string getMessage();
 
         CipherType getWork();
+        void returnWork(CipherType undoneWork);
+        void finishWork(CipherType doneWork);
 
         void AddClientResult(float freqScore, float dictScore, const char* result);
 
@@ -60,10 +65,10 @@ class SolveManager
         DataLoader m_dataLoader;
         string m_encrypted;
 
-        CipherType m_currentCipher;
-        uint32_t m_currentCounter;
-
         std::vector<ClientSolveResult> m_solveResults;
+
+        std::queue<CipherType> m_workToDo;
+        std::multiset<CipherType> m_workInProgress;
 };
 
 #define sSolveManager Singleton<SolveManager>::getInstance()

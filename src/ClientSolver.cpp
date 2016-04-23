@@ -8,6 +8,7 @@
 ClientSolver::ClientSolver(SOCK socket)
 {
     m_mySocket = socket;
+    m_myWork = CT_NONE;
 }
 
 void ClientSolver::SendPacket(SmartPacket &pkt)
@@ -31,6 +32,11 @@ void ClientSolver::HandlePacket(SmartPacket &pkt)
     {
         cerr << "Error reading from packet at position " << ex.GetPosition() << ", attempted to read " << ex.GetAttemptSize() << "bytes" << endl;
     }
+}
+
+CipherType ClientSolver::GetMyWork()
+{
+    return m_myWork;
 }
 
 void ClientSolver::Handle_NULL(SmartPacket& pkt)
@@ -94,6 +100,11 @@ void ClientSolver::HandleGetEncryptedMessage(SmartPacket& pkt)
 void ClientSolver::HandleGetWork(SmartPacket& pkt)
 {
     CipherType ct = sSolveManager->getWork();
+
+    if (m_myWork != CT_NONE)
+        sSolveManager->finishWork(m_myWork);
+
+    m_myWork = ct;
 
     SmartPacket wp(SP_GIVE_WORK);
     wp.WriteUInt16(ct);

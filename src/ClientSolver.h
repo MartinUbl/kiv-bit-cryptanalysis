@@ -3,6 +3,8 @@
 
 class SmartPacket;
 
+#include "SolveEnums.h"
+
 class ClientSolver
 {
     public:
@@ -19,8 +21,10 @@ class ClientSolver
         void HandleGetWork(SmartPacket& pkt);
         void HandleSubmitResult(SmartPacket& pkt);
 
+        CipherType GetMyWork();
+
     protected:
-        //
+        CipherType m_myWork;
 
     private:
         SOCK m_mySocket;
