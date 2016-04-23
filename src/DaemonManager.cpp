@@ -169,7 +169,7 @@ void DaemonManager::RunDaemons()
             continue;
         }
 
-        string tosend = cfg->backhost + " " + std::to_string(cfg->backport);
+        string tosend = std::to_string(cfg->worker_count) + " " + cfg->backhost + " " + std::to_string(cfg->backport);
         char* buf = new char[tosend.length() + 1];
         strcpy(buf, tosend.c_str());
         buf[tosend.length()] = '\0';

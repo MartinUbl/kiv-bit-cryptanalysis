@@ -159,20 +159,35 @@ int main(int argc, char** argv)
                     {
                         cout << "Creating process, args: " << buffer << endl;
 
-                        std::string cmdline = "kiv-bit-cryptanalysis-worker.exe ";
-                        cmdline += buffer;
 #ifdef _WIN32
-                        STARTUPINFO siStartupInfo;
-                        PROCESS_INFORMATION piProcessInfo;
-                        memset(&siStartupInfo, 0, sizeof(siStartupInfo));
-                        memset(&piProcessInfo, 0, sizeof(piProcessInfo));
-                        siStartupInfo.cb = sizeof(siStartupInfo);
-
-                        CreateProcess("kiv-bit-cryptanalysis-worker.exe", (LPSTR)cmdline.c_str(), 0, 0, false, 0, nullptr, nullptr, &siStartupInfo, &piProcessInfo);
+                        std::string cmdbase = "kiv-bit-cryptanalysis-worker.exe";
 #else
-                        if (fork() == 0)
-                            execl("kiv-bit-cryptanalysis-worker", cmdline.c_str());
+                        std::string cmdbase = "kiv-bit-cryptanalysis-worker";
 #endif
+                        std::string backaddress = "";
+                        std::string backport = "";
+
+                        int cnt = atoi(strtok(buffer, " "));
+                        backaddress = strtok(nullptr, " ");
+                        backport = strtok(nullptr, " ");
+
+                        for (int i = 0; i < cnt; i++)
+                        {
+#ifdef _WIN32
+                            STARTUPINFO siStartupInfo;
+                            PROCESS_INFORMATION piProcessInfo;
+                            memset(&siStartupInfo, 0, sizeof(siStartupInfo));
+                            memset(&piProcessInfo, 0, sizeof(piProcessInfo));
+                            siStartupInfo.cb = sizeof(siStartupInfo);
+
+                            std::string cmdline = cmdbase + " " + backaddress + " " + backport;
+
+                            CreateProcess("kiv-bit-cryptanalysis-worker.exe", (LPSTR)cmdline.c_str(), 0, 0, false, 0, nullptr, nullptr, &siStartupInfo, &piProcessInfo);
+#else
+                            if (fork() == 0)
+                                execl("kiv-bit-cryptanalysis-worker", cmdbase.c_str(), backaddress.c_str(), backport.c_str());
+#endif
+                        }
                     }
 
                 } while (LASTERROR() == SOCKETWOULDBLOCK);

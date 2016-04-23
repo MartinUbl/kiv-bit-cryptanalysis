@@ -135,6 +135,8 @@ void Session::Run()
                             res = recv(m_socket, (char*)(recvbuff + recbytes), recvHeader.size - recbytes, 0);
                             if (res <= 0)
                             {
+                                if (LASTERROR() == SOCKETWOULDBLOCK)
+                                    continue;
                                 cerr << "recv(): error, received packet with different size than expected" << endl;
                                 recbytes = -1;
                                 break;

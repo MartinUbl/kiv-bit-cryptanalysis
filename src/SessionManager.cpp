@@ -207,6 +207,8 @@ void SessionManager::Update()
                         res = recv(sc, (char*)(_receiveBuffer + recbytes), pktheader.size - recbytes, 0);
                         if (res <= 0)
                         {
+                            if (LASTERROR() == SOCKETWOULDBLOCK)
+                                continue;
                             cerr << "Received less bytes than expected, not handling" << endl;
                             recbytes = -1;
                             break;
