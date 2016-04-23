@@ -1,0 +1,11 @@
+*.suo
+*.user
+*.sdf
+*.VC.db
+*.VC.opendb
+*.psess
+*.vsp
+*.vspx
+Thumbs.db
+*Debug/
+*Release/

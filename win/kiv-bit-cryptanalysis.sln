@@ -1,0 +1,51 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25123.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kiv-bit-cryptanalysis", "kiv-bit-cryptanalysis\kiv-bit-cryptanalysis.vcxproj", "{DCF536D2-5F75-4D1F-9109-24037A6F69F3}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E3948F0F-A2B3-41EB-9DA5-D21DF3BB2066} = {E3948F0F-A2B3-41EB-9DA5-D21DF3BB2066}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kiv-bit-cryptanalysis-worker", "kiv-bit-cryptanalysis-worker\kiv-bit-cryptanalysis-worker.vcxproj", "{E3948F0F-A2B3-41EB-9DA5-D21DF3BB2066}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kiv-bit-cryptanalysis-daemon", "kiv-bit-cryptanalysis-daemon\kiv-bit-cryptanalysis-daemon.vcxproj", "{879C8A4F-580D-4B5B-95A1-7850F335C469}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DCF536D2-5F75-4D1F-9109-24037A6F69F3}.Debug|x64.ActiveCfg = Debug|x64
+		{DCF536D2-5F75-4D1F-9109-24037A6F69F3}.Debug|x64.Build.0 = Debug|x64
+		{DCF536D2-5F75-4D1F-9109-24037A6F69F3}.Debug|x86.ActiveCfg = Debug|Win32
+		{DCF536D2-5F75-4D1F-9109-24037A6F69F3}.Debug|x86.Build.0 = Debug|Win32
+		{DCF536D2-5F75-4D1F-9109-24037A6F69F3}.Release|x64.ActiveCfg = Release|x64
+		{DCF536D2-5F75-4D1F-9109-24037A6F69F3}.Release|x64.Build.0 = Release|x64
+		{DCF536D2-5F75-4D1F-9109-24037A6F69F3}.Release|x86.ActiveCfg = Release|Win32
+		{DCF536D2-5F75-4D1F-9109-24037A6F69F3}.Release|x86.Build.0 = Release|Win32
+		{E3948F0F-A2B3-41EB-9DA5-D21DF3BB2066}.Debug|x64.ActiveCfg = Debug|x64
+		{E3948F0F-A2B3-41EB-9DA5-D21DF3BB2066}.Debug|x64.Build.0 = Debug|x64
+		{E3948F0F-A2B3-41EB-9DA5-D21DF3BB2066}.Debug|x86.ActiveCfg = Debug|Win32
+		{E3948F0F-A2B3-41EB-9DA5-D21DF3BB2066}.Debug|x86.Build.0 = Debug|Win32
+		{E3948F0F-A2B3-41EB-9DA5-D21DF3BB2066}.Release|x64.ActiveCfg = Release|x64
+		{E3948F0F-A2B3-41EB-9DA5-D21DF3BB2066}.Release|x64.Build.0 = Release|x64
+		{E3948F0F-A2B3-41EB-9DA5-D21DF3BB2066}.Release|x86.ActiveCfg = Release|Win32
+		{E3948F0F-A2B3-41EB-9DA5-D21DF3BB2066}.Release|x86.Build.0 = Release|Win32
+		{879C8A4F-580D-4B5B-95A1-7850F335C469}.Debug|x64.ActiveCfg = Debug|x64
+		{879C8A4F-580D-4B5B-95A1-7850F335C469}.Debug|x64.Build.0 = Debug|x64
+		{879C8A4F-580D-4B5B-95A1-7850F335C469}.Debug|x86.ActiveCfg = Debug|Win32
+		{879C8A4F-580D-4B5B-95A1-7850F335C469}.Debug|x86.Build.0 = Debug|Win32
+		{879C8A4F-580D-4B5B-95A1-7850F335C469}.Release|x64.ActiveCfg = Release|x64
+		{879C8A4F-580D-4B5B-95A1-7850F335C469}.Release|x64.Build.0 = Release|x64
+		{879C8A4F-580D-4B5B-95A1-7850F335C469}.Release|x86.ActiveCfg = Release|Win32
+		{879C8A4F-580D-4B5B-95A1-7850F335C469}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
