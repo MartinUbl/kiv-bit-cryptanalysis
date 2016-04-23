@@ -8,6 +8,10 @@
 #include <set>
 #include <stdint.h>
 #include <thread>
+#include <cstdio>
+#include <cstring>
+#include <climits>
+#include <cfloat>
 
 using namespace std;
 

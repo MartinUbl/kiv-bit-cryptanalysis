@@ -1,7 +1,12 @@
 #include "general.h"
 #include "SmartPacket.h"
 
+#ifdef _WIN32
 #include <Windows.h>
+#else
+#include <unistd.h>
+#include <arpa/inet.h>
+#endif
 
 SmartPacket::SmartPacket() : m_opcode(0), m_size(0), m_readPos(0), m_writePos(0)
 {

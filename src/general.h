@@ -8,6 +8,8 @@
 #include <map>
 #include <vector>
 #include <set>
+#include <cstdio>
+#include <cstring>
 
 using namespace std;
 

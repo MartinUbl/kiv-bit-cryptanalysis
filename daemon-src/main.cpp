@@ -1,5 +1,9 @@
+#ifdef _WIN32
 #include <WS2tcpip.h>
+#endif
 #include "general.h"
+#include <cstring>
+#include <cstdio>
 
 #ifdef _WIN32
 #define SOCK SOCKET
@@ -130,7 +134,7 @@ int main(int argc, char** argv)
         tv.tv_sec = 1;
         tv.tv_usec = 1;
 
-        int res = select(1, &workset, nullptr, nullptr, &tv);
+        int res = select(mysocket + 1, &workset, nullptr, nullptr, &tv);
         if (res < 0)
         {
             // err
@@ -143,7 +147,7 @@ int main(int argc, char** argv)
         {
             sockaddr_in addr;
             int addrlen = sizeof(sockaddr_in);
-            int remotesocket = accept(mysocket, (sockaddr*)&addr, &addrlen);
+            int remotesocket = accept(mysocket, (sockaddr*)&addr, (socklen_t*)&addrlen);
 
             if (remotesocket > 0)
             {
@@ -154,16 +158,21 @@ int main(int argc, char** argv)
                     if (res > 0)
                     {
                         cout << "Creating process, args: " << buffer << endl;
+
+                        std::string cmdline = "kiv-bit-cryptanalysis-worker.exe ";
+                        cmdline += buffer;
+#ifdef _WIN32
                         STARTUPINFO siStartupInfo;
                         PROCESS_INFORMATION piProcessInfo;
                         memset(&siStartupInfo, 0, sizeof(siStartupInfo));
                         memset(&piProcessInfo, 0, sizeof(piProcessInfo));
                         siStartupInfo.cb = sizeof(siStartupInfo);
 
-                        std::string cmdline = "kiv-bit-cryptanalysis-worker.exe ";
-                        cmdline += buffer;
-
                         CreateProcess("kiv-bit-cryptanalysis-worker.exe", (LPSTR)cmdline.c_str(), 0, 0, false, 0, nullptr, nullptr, &siStartupInfo, &piProcessInfo);
+#else
+                        if (fork() == 0)
+                            execl("kiv-bit-cryptanalysis-worker", cmdline.c_str());
+#endif
                     }
 
                 } while (LASTERROR() == SOCKETWOULDBLOCK);

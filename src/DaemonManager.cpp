@@ -1,4 +1,6 @@
+#ifdef _WIN32
 #include <WS2tcpip.h>
+#endif
 #include "general.h"
 #include "DaemonManager.h"
 #include "SessionManager.h"
@@ -176,6 +178,6 @@ void DaemonManager::RunDaemons()
 
         delete buf;
 
-        closesocket(daemonsocket);
+        CLOSESOCKET(daemonsocket);
     }
 }

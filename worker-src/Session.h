@@ -7,9 +7,8 @@
 
 #include <condition_variable>
 
-#include <Windows.h>
-
 #ifdef _WIN32
+#include <Windows.h>
 #define SOCK SOCKET
 #define ADDRLEN int
 

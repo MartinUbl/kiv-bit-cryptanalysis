@@ -1,5 +1,7 @@
+#ifdef _WIN32
 #include <winsock2.h>
 #include <Ws2tcpip.h>
+#endif
 #include "general.h"
 #include "SmartPacket.h"
 #include "SessionManager.h"
@@ -21,6 +23,7 @@ SessionManager::~SessionManager()
 
 bool SessionManager::InitListener()
 {
+#ifdef _WIN32
     WORD version = MAKEWORD(1, 1);
     WSADATA data;
     if (WSAStartup(version, &data) != 0)
@@ -28,6 +31,7 @@ bool SessionManager::InitListener()
         cerr << "Unable to start winsock service" << endl;
         return false;
     }
+#endif
 
     if ((m_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
     {
@@ -93,6 +97,8 @@ bool SessionManager::InitListener()
     FD_SET(m_socket, &m_socketSet);
     m_activeSockets.insert(m_socket);
 
+    nfds = m_socket;
+
     return true;
 }
 
@@ -131,7 +137,7 @@ void SessionManager::Update()
     tv.tv_sec = 1;
     tv.tv_usec = 1;
 
-    res = select(1, &acs, nullptr, nullptr, &tv);
+    res = select(nfds + 1, &acs, nullptr, nullptr, &tv);
     if (res < 0)
     {
         cerr << "select(): error " << LASTERROR() << endl;
@@ -153,7 +159,7 @@ void SessionManager::Update()
             {
                 sockaddr_in* addr = new sockaddr_in;
                 int addrlen = sizeof(sockaddr_in);
-                res = accept(m_socket, (sockaddr*)addr, &addrlen);
+                res = accept(m_socket, (sockaddr*)addr, (socklen_t*)&addrlen);
 
                 if (res > 0)
                 {
@@ -162,6 +168,9 @@ void SessionManager::Update()
                     toadd.insert((SOCK)res);
                     FD_SET(res, &m_socketSet);
                     m_clientSolverMap[(SOCK)res] = new ClientSolver((SOCK)res);
+
+                    if (res > nfds)
+                        nfds = res;
                 }
                 else
                 {
@@ -191,12 +200,22 @@ void SessionManager::Update()
 
                 if (pktheader.size > 0)
                 {
-                    res = recv(sc, (char*)_receiveBuffer, pktheader.size, 0);
-                    if (res < pktheader.size)
+                    int recbytes = 0;
+
+                    while (recbytes != pktheader.size)
                     {
-                        cerr << "Received less bytes than expected, not handling" << endl;
-                        continue;
+                        res = recv(sc, (char*)(_receiveBuffer + recbytes), pktheader.size - recbytes, 0);
+                        if (res <= 0)
+                        {
+                            cerr << "Received less bytes than expected, not handling" << endl;
+                            recbytes = -1;
+                            break;
+                        }
+                        recbytes += res;
                     }
+
+                    if (recbytes == -1)
+                        continue;
                 }
 
                 SmartPacket pkt(pktheader.opcode, pktheader.size);

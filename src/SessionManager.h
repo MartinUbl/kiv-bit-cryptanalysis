@@ -14,6 +14,7 @@
 #define LASTERROR() WSAGetLastError()
 #define INET_PTON(fam,addrptr,buff) InetPton(fam,addrptr,buff)
 #define INET_NTOP(fam,addrptr,buff,socksize) InetNtop(fam,addrptr,buff,socksize)
+#define CLOSESOCKET closesocket
 #else
 #include <iostream>
 #include <sys/types.h>
@@ -37,6 +38,7 @@
 #define LASTERROR() errno
 #define INET_PTON(fam,addrptr,buff) inet_pton(fam,addrptr,buff)
 #define INET_NTOP(fam,addrptr,buff,socksize) inet_ntop(fam,addrptr,buff,socksize)
+#define CLOSESOCKET close
 #endif
 
 #ifndef MSG_NOSIGNAL
@@ -63,6 +65,8 @@ class SessionManager
     private:
         SOCK m_socket;
         sockaddr_in m_sockAddr;
+
+        SOCK nfds;
 
         fd_set m_socketSet;
         std::set<SOCK> m_activeSockets;

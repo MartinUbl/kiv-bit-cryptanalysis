@@ -1,5 +1,6 @@
+#ifdef _WIN32
 #include <WS2tcpip.h>
-
+#endif
 #include "general.h"
 #include "Session.h"
 #include "Solver.h"
@@ -106,10 +107,10 @@ void Session::Run()
         tv.tv_sec = 1;
         tv.tv_usec = 1;
 
-        res = select(1, &rdset, nullptr, nullptr, &tv);
+        res = select(m_socket + 1, &rdset, nullptr, nullptr, &tv);
         if (res < 0)
         {
-            cerr << "select(): error " << WSAGetLastError() << endl;
+            cerr << "select(): error " << LASTERROR() << endl;
         }
         else if (res > 0)
         {
@@ -127,12 +128,22 @@ void Session::Run()
 
                     if (recvHeader.size > 0)
                     {
-                        res = recv(m_socket, (char*)recvbuff, recvHeader.size, 0);
-                        if (res != recvHeader.size)
+                        int recbytes = 0;
+
+                        while (recbytes != recvHeader.size)
                         {
-                            cerr << "recv(): error, received packet with different size than expected" << endl;
-                            continue;
+                            res = recv(m_socket, (char*)(recvbuff + recbytes), recvHeader.size - recbytes, 0);
+                            if (res <= 0)
+                            {
+                                cerr << "recv(): error, received packet with different size than expected" << endl;
+                                recbytes = -1;
+                                break;
+                            }
+                            recbytes += res;
                         }
+
+                        if (recbytes == -1)
+                            continue;
                     }
 
                     SmartPacket pkt(recvHeader.opcode, recvHeader.size);
