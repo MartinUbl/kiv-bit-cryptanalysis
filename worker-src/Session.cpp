@@ -247,9 +247,13 @@ void Session::HandleFreqMapPacket(SmartPacket& pkt)
     for (uint32_t i = 0; i < alphabetSize; i++)
         freqmap[i] = pkt.ReadFloat();
 
-    cout << "Received frequency map of " << alphabetSize << " letters" << endl;
-
     sDataHolder->SetFrequencies(alphabetSize, freqmap);
+
+    uint32_t bigramsSize = pkt.ReadUInt32();
+    for (uint32_t i = 0; i < bigramsSize; i++)
+        sDataHolder->AddBigram(pkt.ReadString().c_str(), pkt.ReadFloat());
+
+    cout << "Received frequency map of " << alphabetSize << " letters and " << bigramsSize << " bigrams" << endl;
 }
 
 void Session::HandleDictionaryWordsPacket(SmartPacket& pkt)
@@ -281,7 +285,17 @@ void Session::HandleGiveWorkPacket(SmartPacket& pkt)
     if (work >= CT_NONE && work < MAX_CIPHER_TYPE)
         sSolverManager->SetObtainedWork((CipherType)work);
 
-    cout << "Obtained work: " << work << endl;
+    if (work != CT_NONE)
+    {
+        uint32_t seed = pkt.ReadUInt32();
+
+        cout << "Obtained work: " << work << ", received seed: " << seed << endl;
+
+        // set new random seed
+        srand((unsigned int)(time(NULL)) * seed);
+    }
+    else
+        cout << "No work, exiting" << endl;
 }
 
 void Session::HandleResultAcceptPacket(SmartPacket& pkt)

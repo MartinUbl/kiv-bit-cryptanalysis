@@ -58,11 +58,21 @@ void ClientSolver::HandleHello(SmartPacket& pkt)
 void ClientSolver::HandleGetFreqMap(SmartPacket& pkt)
 {
     double* freqmap = sSolveManager->getDataLoader().GetFrequencyMap();
+    std::map<string, float>* bifreqmap = sSolveManager->getDataLoader().GetBigramFrequencyMap();
 
     SmartPacket resp(SP_FREQ_MAP);
+
     resp.WriteUInt32(ALPHABET_SIZE);
     for (int i = 0; i < ALPHABET_SIZE; i++)
         resp.WriteFloat((float)(freqmap[i]));
+
+    resp.WriteUInt32(bifreqmap->size());
+    for (auto &bif : *bifreqmap)
+    {
+        resp.WriteString(bif.first.c_str());
+        resp.WriteFloat(bif.second);
+    }
+
     SendPacket(resp);
 }
 

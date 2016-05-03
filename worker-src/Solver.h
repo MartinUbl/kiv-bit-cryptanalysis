@@ -25,6 +25,7 @@ class ResultScore
 };
 
 typedef std::vector<string> Dictionary;
+typedef std::map<string, float> StringFreqMap;
 
 class DataHolder
 {
@@ -32,10 +33,12 @@ class DataHolder
     public:
         void SetFrequencies(uint32_t alphabet_len, float* freqs);
         void AddWord(string word);
+        void AddBigram(const char* bigram, float freq);
 
         uint32_t GetAlphabetLength();
         float* GetFrequencies();
         Dictionary* GetDictionary();
+        StringFreqMap* GetBigramFrequencies();
 
         void SetEncryptedMessage(std::string str);
         const char* GetEncryptedMessage();
@@ -46,6 +49,7 @@ class DataHolder
     private:
         uint32_t m_alphabetLength;
         float* m_frequencies;
+        StringFreqMap m_bigramFrequencies;
         std::string m_origMessage;
         Dictionary m_words;
 };
@@ -124,6 +128,43 @@ class Solver_Vigenere : public SolverTemplate
 
     private:
         //
+};
+
+class Solver_MonoalphaSub : public SolverTemplate
+{
+    public:
+        Solver_MonoalphaSub() : SolverTemplate(CT_MONOALPHABETIC_SUB_GA) { };
+
+        bool Initialize();
+        void Solve();
+
+    protected:
+        struct Chromosome
+        {
+            char alphabet[26];
+            float fitness;
+            bool changed;
+        };
+
+        void RecalculateFitness();
+        void RecalculateFitnessOn(Chromosome* gen);
+        void PerformCrossover();
+        void PerformMutation();
+        void ElitismStore();
+        void ElitismRestore();
+        void PerformWordMapping();
+        void PerformCrossoverOn(Chromosome* src, Chromosome* dst);
+        void PerformMutationOn(Chromosome* dst);
+        void PerformVowelPermutationOn(Chromosome* dst);
+        void PerformWordMappingOn(Chromosome* dst);
+
+    private:
+        Chromosome** m_population;
+        Chromosome* m_elite;
+        Chromosome* m_original;
+        uint32_t m_populationSize;
+
+        Dictionary m_cipherDictionary;
 };
 
 class SolverManager

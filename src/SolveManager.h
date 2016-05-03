@@ -14,7 +14,7 @@ static uint32_t _solverCounts[MAX_CIPHER_TYPE] = {
     1, // CT_ATBAS
     1, // CT_CAESAR
     1, // CT_VIGENERE
-    0, // CT_MONOALPHABETIC_SUB
+    4, // CT_MONOALPHABETIC_SUB_GA
     0, // CT_BIALPHABETIC_SUB (NYI!)
 };
 
@@ -28,11 +28,13 @@ class DataLoader
         void LoadWords();
 
         double* GetFrequencyMap();
+        std::map<string, float>* GetBigramFrequencyMap();
         std::vector<string>* GetDictionary();
 
     private:
         std::vector<string> m_words;
         double m_frequencies[ALPHABET_SIZE];
+        std::map<string, float> m_bigramFrequencies;
         string m_languageFile;
 };
 

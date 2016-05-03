@@ -7,7 +7,7 @@ enum CipherType
     CT_ATBAS = 1,                           // atbas cipher (a=z, b=y, ..)
     CT_CAESAR = 2,                          // caesar cipher (move alphabet by N)
     CT_VIGENERE = 3,                        // Vigenere cipher (polyalphabetic with key determining alphabet offset)
-    CT_MONOALPHABETIC_SUB = 4,              // monoalphabetic substitution (1:1 cipher alphabet)
+    CT_MONOALPHABETIC_SUB_GA = 4,           // monoalphabetic substitution (1:1 cipher alphabet) via genetic algorithm
 
     // not yet supported:
     CT_BIALPHABETIC_SUB = 5,                // 2 alphabets, one for even characters, one for odd

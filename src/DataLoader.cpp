@@ -15,6 +15,7 @@ void DataLoader::LoadWords()
 {
     string wordFileName = m_languageFile + ".stripped";
     string freqFileName = m_languageFile + ".freq";
+    string bigramfreqFileName = m_languageFile + ".freq2";
     char buffer[256];
     int len;
 
@@ -57,6 +58,27 @@ void DataLoader::LoadWords()
             m_frequencies[i] = atof(freq);
             i++;
         }
+
+        fclose(f);
+    }
+
+    f = fopen(bigramfreqFileName.c_str(), "r");
+    if (!f)
+    {
+        cerr << "Unable to load bigram frequency map" << endl;
+    }
+    else
+    {
+        while (fgets(buffer, 256, f))
+        {
+            char* bigram = strtok(buffer, ";");
+            strtok(nullptr, ";");
+            char* freq = strtok(nullptr, "\n");
+
+            m_bigramFrequencies[bigram] = atof(freq);
+        }
+
+        fclose(f);
     }
 }
 
@@ -68,4 +90,9 @@ double* DataLoader::GetFrequencyMap()
 std::vector<string>* DataLoader::GetDictionary()
 {
     return &m_words;
+}
+
+std::map<string, float>* DataLoader::GetBigramFrequencyMap()
+{
+    return &m_bigramFrequencies;
 }

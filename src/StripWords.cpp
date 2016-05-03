@@ -88,8 +88,10 @@ int StripInputWords(int argc, char** argv)
         return 3;
     }
 
+    std::map< uint16_t, int > bigramFrequency;
     unsigned int frequency[26];
     size_t i;
+    uint16_t tmpbi;
 
     for (i = 0; i < 26; i++)
         frequency[i] = 0;
@@ -100,6 +102,16 @@ int StripInputWords(int argc, char** argv)
 
         for (i = 0; i < w.size(); i++)
             frequency[w[i] - 'a']++;
+
+        for (i = 0; i < w.size() - 1; i++)
+        {
+            tmpbi = ((char)w[i]);
+            tmpbi |= ((char)w[i+1]) << 8;
+
+            if (bigramFrequency.find(tmpbi) == bigramFrequency.end())
+                bigramFrequency[tmpbi] = 0;
+            bigramFrequency[tmpbi] = bigramFrequency[tmpbi] + 1;
+        }
     }
 
     fclose(f);
@@ -107,6 +119,9 @@ int StripInputWords(int argc, char** argv)
     unsigned int sumf = 0;
     for (i = 0; i < 26; i++)
         sumf += frequency[i];
+    unsigned int sumbif = 0;
+    for (auto &fr : bigramFrequency)
+        sumbif += fr.second;
 
     float pctfrequency[26];
 
@@ -126,6 +141,33 @@ int StripInputWords(int argc, char** argv)
 
     for (i = 0; i < 26; i++)
         fprintf(f, "%c;%u;%f\n", 'a'+i, frequency[i], pctfrequency[i]);
+
+    fclose(f);
+
+    ///////
+
+    outfilename = argv[2];
+    outfilename += ".freq2";
+
+    f = fopen(outfilename.c_str(), "w");
+
+    if (!f)
+    {
+        cerr << "Could not open bigram frequency output file " << outfilename.c_str() << endl;
+        return 4;
+    }
+
+    char tmpbi2[3];
+    tmpbi2[2] = '\0';
+    for (auto &fr : bigramFrequency)
+    {
+        float relfr = ((float)fr.second) / ((float)sumbif);
+        if (relfr > 0.001f)
+        {
+            strncpy(tmpbi2, (char*)&fr.first, 2);
+            fprintf(f, "%s;%u;%f\n", tmpbi2, fr.second, relfr);
+        }
+    }
 
     fclose(f);
 

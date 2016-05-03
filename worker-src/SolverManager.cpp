@@ -33,6 +33,8 @@ SolverTemplate* SolverManager::CreateSolver(CipherType ct)
             return new Solver_Caesar();
         case CT_VIGENERE:
             return new Solver_Vigenere();
+        case CT_MONOALPHABETIC_SUB_GA:
+            return new Solver_MonoalphaSub();
         default:
             return nullptr;
     }
