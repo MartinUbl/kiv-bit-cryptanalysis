@@ -1,5 +1,6 @@
 #include "general.h"
 #include "Solver.h"
+#include <cmath>
 
 static char* monoalpha_buffer;
 
