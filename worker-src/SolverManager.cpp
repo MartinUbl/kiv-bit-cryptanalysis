@@ -42,6 +42,7 @@ SolverTemplate* SolverManager::CreateSolver(CipherType ct)
 
 void SolverManager::Run()
 {
+    // initialization sequence (fully synchronized)
     sSession->WAITFOR(SP_HELLO_RESPONSE)->SendHello();
     sSession->WAITFOR(SP_ENC_MESSAGE)->SendGetEncMessage();
     sSession->WAITFOR(SP_END_OF_DICTIONARY)->SendGetDictionary();
@@ -51,16 +52,22 @@ void SolverManager::Run()
 
     do
     {
+        // retrieve work
         sSession->WAITFOR(SP_GIVE_WORK)->SendGetWork();
 
+        // if solver not available, skip and get next work
         SolverTemplate* st = CreateSolver(m_myWork);
         if (!st)
             continue;
 
+        // sets encrypted message to solver
         st->SetMessage(sDataHolder->GetEncryptedMessage());
+        // init solver
         st->Initialize();
+        // solve!
         st->Solve();
 
+        // retrieve result list and send all results to master
         resList = st->GetResultList();
 
         for (SolverResult& sr : *resList)
@@ -68,6 +75,7 @@ void SolverManager::Run()
 
         delete st;
 
+        // sleep for a while
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
     while (m_myWork != CT_NONE);

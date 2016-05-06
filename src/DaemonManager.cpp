@@ -24,6 +24,7 @@ DaemonManager::DaemonManager()
 
 bool DaemonManager::LoadDaemons()
 {
+    // load daemons from file
     FILE* f = fopen("daemons.cf", "r");
     if (!f)
     {
@@ -38,21 +39,27 @@ bool DaemonManager::LoadDaemons()
 
     DaemonConfig* dcfg = nullptr;
 
+    // parse file by lines
     while (fgets(buffer, 255, f))
     {
+        // erase initial whitespaces
         bufptr = buffer;
-        while (*bufptr == ' ')
+        while (*bufptr == ' ' || *bufptr == '\t')
             bufptr++;
 
+        // cut line endings (CR and LF)
         for (int i = strlen(bufptr); i >= 0; i--)
             if (bufptr[i] == '\n' || bufptr[i] == '\r')
                 bufptr[i] = '\0';
 
+        // skip empty lines
         if (strlen(bufptr) == 0)
             continue;
+        // skip comments (beginning with # character)
         if (bufptr[0] == '#')
             continue;
 
+        // lines beginning with [ character begins new single daemon block
         if (bufptr[0] == '[')
         {
             dcfg = new DaemonConfig;
@@ -60,11 +67,13 @@ bool DaemonManager::LoadDaemons()
             int hostread = 0;
             for (int i = 1; i < 255; i++)
             {
+                // parse host
                 if (!hostread && (bufptr[i] == ':' || bufptr[i] == ']'))
                 {
                     dcfg->host = std::string(&bufptr[1], i - 1);
                     hostread = i;
                 }
+                // parse port
                 else if (hostread && bufptr[i] == ']')
                 {
                     dcfg->port = atoi(&bufptr[hostread+1]);
@@ -81,13 +90,18 @@ bool DaemonManager::LoadDaemons()
             return false;
         }
 
+        // go to the end of identifier
         valptr = bufptr;
         while (*valptr != ' ' && *valptr != '\0')
             valptr++;
+
+        // identifier is now parsed
         std::string identifier(bufptr, valptr);
+        // skip spaces
         while (*valptr == ' ')
             valptr++;
 
+        // if no value present.. exit
         if (*valptr == '\0')
         {
             cerr << "Key " << bufptr << " without value" << endl;
@@ -107,20 +121,16 @@ bool DaemonManager::LoadDaemons()
     return true;
 }
 
-void DaemonManager::RunDaemons()
+int DaemonManager::RunDaemons()
 {
+    // daemons, that we succeeded to contact
+    int okcount = 0;
+
     for (DaemonConfig* cfg : m_daemonPaths)
     {
-#ifdef _WIN32
-        WORD version = MAKEWORD(1, 1);
-        WSADATA data;
-        if (WSAStartup(version, &data) != 0)
-        {
-            cerr << "Unable to start winsock service" << endl;
-            break;
-        }
-#endif
+        cout << "Connecting to " << cfg->name.c_str() << " - " << cfg->host.c_str() << ", port: " << cfg->port << " ... ";
 
+        // init socket
         SOCK daemonsocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         sockaddr_in daemonsockaddr;
 
@@ -129,7 +139,7 @@ void DaemonManager::RunDaemons()
 
         if (INET_PTON(AF_INET, cfg->host.c_str(), &daemonsockaddr.sin_addr.s_addr) != 1)
         {
-            cerr << "Unable to resolve bind address" << endl;
+            cerr << endl << "Unable to resolve address" << endl;
             continue;
         }
 
@@ -137,6 +147,7 @@ void DaemonManager::RunDaemons()
         FD_ZERO(&set);
         FD_SET(daemonsocket, &set);
 
+        // switch to nonblocking mode
 #ifdef _WIN32
         u_long arg = 1;
         if (ioctlsocket(daemonsocket, FIONBIO, &arg) == SOCKET_ERROR)
@@ -145,39 +156,52 @@ void DaemonManager::RunDaemons()
         if (fcntl(daemonsocket, F_SETFL, oldFlag | O_NONBLOCK) == -1)
 #endif
         {
-            cerr << "Failed to switch socket to non-blocking mode" << endl;
+            cerr << endl << "Failed to switch socket to non-blocking mode" << endl;
             continue;
         }
 
+        // connect to daemon
         if (connect(daemonsocket, (sockaddr*)&daemonsockaddr, sizeof(sockaddr_in)) < 0)
         {
+            // if connection could not be estabilished, skip this daemon
             if (LASTERROR() != SOCKETINPROGRESS && LASTERROR() != SOCKETWOULDBLOCK)
             {
-                cerr << "Unable to connect to daemon" << endl;
+                cout << "FAILED (" << LASTERROR() << ")" << endl;
                 continue;
             }
         }
 
+        // 3 seconds timeout
         timeval tv;
         tv.tv_sec = 3;
         tv.tv_usec = 1;
 
-        select(1, nullptr, &set, nullptr, &tv);
+        // wait 3 seconds to connect
+        select((int)(daemonsocket + 1), nullptr, &set, nullptr, &tv);
+        // socket would be in writable fdset if connection succeeded
         if (!FD_ISSET(daemonsocket, &set))
         {
-            cerr << "Unable to connect to daemon" << endl;
+            cout << "FAILED (" << LASTERROR() << ")" << endl;
             continue;
         }
 
+        // pass connection info
         string tosend = std::to_string(cfg->worker_count) + " " + cfg->backhost + " " + std::to_string(cfg->backport);
         char* buf = new char[tosend.length() + 1];
         strcpy(buf, tosend.c_str());
         buf[tosend.length()] = '\0';
 
+        // send it
         send(daemonsocket, buf, tosend.length() + 1, 0);
 
         delete buf;
 
+        // and close socket
         CLOSESOCKET(daemonsocket);
+
+        cout << "OK" << endl;
+        okcount++;
     }
+
+    return okcount;
 }

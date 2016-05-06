@@ -5,7 +5,7 @@
 #include <mutex>
 
 const char* vigenere_table = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-static const int topcharcount = 14;
+static const int topcharcount = 6;
 static int topchars[topcharcount];
 static char* keyBase;
 
@@ -99,7 +99,7 @@ void Solver_Vigenere::Solve()
 
     map<int, int> factors;
 
-    if (repetitons.size() == 0)
+    if (repetitons.size() < 10)
         return;
 
     // for all repetitions... find all factors
@@ -143,8 +143,20 @@ void Solver_Vigenere::Solve()
         factors[maxi] = -1;
     }
 
+    int maxthreads = std::thread::hardware_concurrency();
+    if (maxthreads == 0)
+        maxthreads = 2;
+
+    cout << "Using " << maxthreads << " solver threads" << endl;
+
     for (int guesskeylen : keyLens)
     {
+        // skip >10 character keys
+        if (guesskeylen > 10)
+            continue;
+
+        cout << "Processing key length: " << guesskeylen << endl;
+
         // preparation for frequency analysis
         int freqs[26];
         int sum, p;
@@ -211,21 +223,38 @@ void Solver_Vigenere::Solve()
             topchars[i] = maxi;
             realfreqs[maxi] = -2.0f;
         }
-
-        char* result = new char[len + 1];
-        result[len] = '\0';
-
-        char* finalkey = new char[guesskeylen + 1];
-        finalkey[guesskeylen] = '\0';
+        delete realfreqs;
 
         std::list<SolverResult> results;
 
         std::thread* thrs[topcharcount];
+
+        int activethrs = 0;
         for (int i = 0; i < topcharcount; i++)
+        {
             thrs[i] = new std::thread(vigenere_threadfunc, i, guesskeylen, msg, &results);
+            activethrs++;
+
+            if (activethrs >= maxthreads)
+            {
+                for (int j = 0; j < i; j++)
+                {
+                    if (thrs[i]->joinable())
+                        thrs[j]->join();
+                }
+
+                activethrs = 0;
+            }
+        }
 
         for (int i = 0; i < topcharcount; i++)
-            thrs[i]->join();
+        {
+            if (thrs[i]->joinable())
+                thrs[i]->join();
+        }
+
+        for (int i = 0; i < topcharcount; i++)
+            delete thrs[i];
 
         for (SolverResult& fr : results)
             AddResult(fr.freqScore, fr.dictScore, fr.result.c_str());
@@ -270,4 +299,7 @@ void vigenere_threadfunc(int fdiff, int guesskeylen, const char* msg, std::list<
 
     finalkey[guesskeylen - 1] = ClipChar('a' - (('a' + topchars[fdiff]) - ('a' + keyBase[guesskeylen - 1])));
     vigenere_thread_recur(guesskeylen - 2, guesskeylen, finalkey, result, msg, resf);
+
+    delete finalkey;
+    delete result;
 }

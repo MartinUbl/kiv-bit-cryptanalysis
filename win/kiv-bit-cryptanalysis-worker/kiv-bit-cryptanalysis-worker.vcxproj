@@ -125,7 +125,6 @@
     <ClCompile Include="..\..\worker-src\Solver_Atbas.cpp" />
     <ClCompile Include="..\..\worker-src\Solver_Caesar.cpp" />
     <ClCompile Include="..\..\worker-src\Solver_MonoalphaSub.cpp" />
-    <ClCompile Include="..\..\worker-src\Solver_BialphaSub.cpp" />
     <ClCompile Include="..\..\worker-src\Solver_Vigenere.cpp" />
   </ItemGroup>
   <ItemGroup>

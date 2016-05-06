@@ -40,9 +40,6 @@
     <ClCompile Include="..\..\worker-src\Solver_MonoalphaSub.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\worker-src\Solver_BialphaSub.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\worker-src\Application.h">

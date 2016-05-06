@@ -22,6 +22,7 @@ void Solver_Caesar::Solve()
     char* tmp = new char[len+1];
     tmp[len] = '\0';
 
+    // bruteforce all possible moves
     for (int i = 0; i < 25; i++)
     {
         for (size_t j = 0; j < len; j++)

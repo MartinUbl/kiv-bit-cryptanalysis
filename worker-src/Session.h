@@ -52,18 +52,28 @@ class Session
 {
     friend class Singleton<Session>;
     public:
+        // connect to master
         bool Connect(const char* serverAddr, uint16_t port);
+        // send packet to master
         void SendPacket(SmartPacket& pkt);
 
+        // join this thread (i.e. to wait until it finishes properly)
         void JoinThread();
 
+        // set the opcode, for which we will wait in next SendPacket call (after sending)
         Session* SetWaitForResponse(uint16_t opc);
 
+        // send HELLO packet
         void SendHello();
+        // request frequencies
         void SendGetFreqMap();
+        // request dictionary
         void SendGetDictionary();
+        // request encrypted message
         void SendGetEncMessage();
+        // request work from master
         void SendGetWork();
+        // submit solved result
         void SendSubmitResult(float freqScore, float dictScore, const char* result);
 
         void Handle_NULL(SmartPacket &pkt);
@@ -76,20 +86,31 @@ class Session
         void HandleResultAcceptPacket(SmartPacket& pkt);
 
     protected:
+        // protected singleton instance
         Session();
+        // run session manager
         void Run();
+        // handle incoming packet
         void HandlePacket(SmartPacket &pkt);
 
     private:
+        // master host
         string m_host;
+        // master port
         uint16_t m_port;
 
+        // are we waiting for response? if yes (>0), for what opcode?
         uint16_t m_waitForResponse;
 
+        // our sockaddr
         sockaddr_in m_sockAddr;
+        // our socket
         SOCK m_socket;
+        // network thread
         std::thread* m_networkThread;
+        // response waiting monitor
         std::condition_variable m_respCond;
+        // mutex for synchronization
         std::mutex m_netMutex;
 };
 

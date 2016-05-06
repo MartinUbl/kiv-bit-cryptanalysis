@@ -13,55 +13,94 @@ SolveManager::SolveManager()
 
 int SolveManager::Run(int argc, char** argv)
 {
-    if (argc < 3)
+    if (argc < 3 || argc > 4)
     {
-        cerr << "Not enough parameters" << endl;
-        cerr << "Usage: " << argv[0] << " solve <input file>" << endl;
+        cerr << "Invalid count of parameters" << endl;
+        cerr << "Usage: " << argv[0] << " solve <input file> [dictionary base]" << endl;
         return 1;
     }
 
+    // open source stream
     std::ifstream srcstream(argv[2]);
-
     if (srcstream.bad() || srcstream.fail())
     {
         cerr << "Cannot open file " << argv[2] << endl;
         return 2;
     }
 
+    // read whole message
     m_encrypted = std::string((std::istreambuf_iterator<char>(srcstream)), std::istreambuf_iterator<char>());
 
-    m_dataLoader.SetLanguageFile("cs_words");
-    m_dataLoader.LoadWords();
+    // load language file
+    m_dataLoader.SetLanguageFile(argc > 3 ? argv[3] : "words");
+    if (!m_dataLoader.LoadWords())
+    {
+        cerr << "Unable to load some of dictionary files, cannot continue" << endl;
+        return 4;
+    }
 
+    // init farmer work queue
     for (int i = 0; i < MAX_CIPHER_TYPE; i++)
     {
-        for (int j = 0; j < _solverCounts[i]; j++)
+        for (size_t j = 0; j < _solverCounts[i]; j++)
             m_workToDo.push((CipherType)i);
     }
 
+    // initialize randomness
     srand((unsigned int)time(nullptr));
 
+    // init daemon manager
     if (!sDaemonManager->LoadDaemons())
     {
         cerr << "Unable to load daemons" << endl;
         return 3;
     }
 
+    cout << "Daemon manager initialized" << endl;
+
+    // init network listener
     if (!sSessionManager->InitListener())
     {
         cerr << "Unable to initialize session manager" << endl;
         return 1;
     }
 
-    sDaemonManager->RunDaemons();
+    // contact remote daemons to start workers
+    int dcount = sDaemonManager->RunDaemons();
 
-    cout << "Waiting for clients..." << endl;
+    if (dcount <= 0)
+    {
+        cerr << "No daemons available, exiting." << endl;
+        return 5;
+    }
 
+    cout << "Available daemons: " << dcount << endl;
+
+    cout << "Initiating solver sequence..." << endl;
+
+    // override output file
+    FILE* log_m = fopen("output.txt", "w");
+    if (log_m)
+        fclose(log_m);
+
+    // time values
+    time_t startTime = time(nullptr);
+    time_t lastMsg = time(nullptr);
+    const time_t repeatTime = 30;
+
+    // main worker/updater loop
     while (!m_workToDo.empty() || !m_workInProgress.empty())
     {
         sSessionManager->Update();
+
+        if (lastMsg + repeatTime < time(nullptr))
+        {
+            cout << "Time: " << (time(nullptr) - startTime) << "s, workers: " << sSessionManager->GetClientCount() << ", results: " << m_solveResults.size() << endl;
+            lastMsg = time(nullptr);
+        }
     }
 
+    // find most suitable result
     std::string suitable;
     float suitScore = 0.0f;
 
@@ -75,6 +114,17 @@ int SolveManager::Run(int argc, char** argv)
     }
 
     cout << "Most suitable score: " << suitScore << endl << suitable.c_str() << endl;
+
+    // log most suitable score to output
+    log_m = fopen("output.txt", "a");
+    if (log_m)
+    {
+        fprintf(log_m, "--------------------------------");
+        fprintf(log_m, "Most suitable result\n");
+        fprintf(log_m, "Total score: %f\n", suitScore);
+        fprintf(log_m, "Message: %s\n", suitable.c_str());
+        fclose(log_m);
+    }
 
     return 0;
 }
@@ -104,12 +154,17 @@ CipherType SolveManager::getWork()
 void SolveManager::returnWork(CipherType undoneWork)
 {
     m_workToDo.push(undoneWork);
-    m_workInProgress.erase(undoneWork);
+
+    auto itr = m_workInProgress.find(undoneWork);
+    if (itr != m_workInProgress.end())
+        m_workInProgress.erase(itr);
 }
 
 void SolveManager::finishWork(CipherType doneWork)
 {
-    m_workInProgress.erase(doneWork);
+    auto itr = m_workInProgress.find(doneWork);
+    if (itr != m_workInProgress.end())
+        m_workInProgress.erase(itr);
 }
 
 void SolveManager::AddClientResult(float freqScore, float dictScore, const char* result)

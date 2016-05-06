@@ -7,6 +7,7 @@
 #include "SessionManager.h"
 #include "Opcodes.h"
 #include "ClientSolver.h"
+#include "SolveManager.h"
 
 #define RECV_BUFFER_SIZE 2048
 uint8_t _receiveBuffer[RECV_BUFFER_SIZE];
@@ -23,30 +24,31 @@ SessionManager::~SessionManager()
 
 bool SessionManager::InitListener()
 {
+    // init winsock if on windows
 #ifdef _WIN32
     WORD version = MAKEWORD(1, 1);
     WSADATA data;
     if (WSAStartup(version, &data) != 0)
     {
-        cerr << "Unable to start winsock service" << endl;
+        cerr << "NET: Unable to start winsock service" << endl;
         return false;
     }
 #endif
 
     if ((m_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
     {
-        cerr << "Unable to create socket" << endl;
+        cerr << "NET: Unable to create socket" << endl;
         return false;
     }
 
     int param = 1;
     if (setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&param, sizeof(int)) == -1)
     {
-        cerr << "Failed to use SO_REUSEADDR flag, bind may fail due to orphan connections to old socket" << endl;
+        cerr << "NET: Failed to use SO_REUSEADDR flag, bind may fail due to orphan connections to old socket" << endl;
         // do not fail whole process, this is not mandatory
     }
 
-    // retrieve address
+    // TODO: make this customizable - config file?
     std::string bindAddr = "0.0.0.0";
     uint16_t m_port = 8170;
 
@@ -56,31 +58,32 @@ bool SessionManager::InitListener()
     // resolve IP address from entered host/IP address in config
     if (INET_PTON(AF_INET, bindAddr.c_str(), &m_sockAddr.sin_addr.s_addr) != 1)
     {
-        cerr << "Unable to resolve bind address" << endl;
+        cerr << "NET: Unable to resolve bind address" << endl;
         return false;
     }
 
     // detect invalid address supplied in config
     if (m_sockAddr.sin_addr.s_addr == INADDR_NONE)
     {
-        cerr << "Invalid bind address specified. Please, specify valid IPv4 address" << endl;
+        cerr << "NET: Invalid bind address specified. Please, specify valid IPv4 address" << endl;
         return false;
     }
 
     // bind to network interface/address
     if (bind(m_socket, (sockaddr*)&m_sockAddr, sizeof(m_sockAddr)) == -1)
     {
-        cerr << "Failed to bind socket" << endl;
+        cerr << "NET: Failed to bind socket" << endl;
         return false;
     }
 
     // create listen queue to be checked
     if (listen(m_socket, 10) == -1)
     {
-        cerr << "Couldn't create connection queue" << endl;
+        cerr << "NET: Couldn't create connection queue" << endl;
         return false;
     }
 
+    // switch to nonblocking mode
 #ifdef _WIN32
     u_long arg = 1;
     if (ioctlsocket(m_socket, FIONBIO, &arg) == SOCKET_ERROR)
@@ -89,10 +92,11 @@ bool SessionManager::InitListener()
     if (fcntl(m_socket, F_SETFL, oldFlag | O_NONBLOCK) == -1)
 #endif
     {
-        cerr << "Failed to switch socket to non-blocking mode" << endl;
+        cerr << "NET: Failed to switch socket to non-blocking mode" << endl;
         return false;
     }
 
+    // init fdset
     FD_ZERO(&m_socketSet);
     FD_SET(m_socket, &m_socketSet);
     m_activeSockets.insert(m_socket);
@@ -132,15 +136,21 @@ void SessionManager::Update()
         uint16_t size;
     } pktheader;
 
+    // temp space for address due to logs
+    char tmpaddr[18];
+    memset(tmpaddr, 0, 18);
+
     memcpy(&acs, &m_socketSet, sizeof(fd_set));
 
+    // 1 second timeout
     tv.tv_sec = 1;
     tv.tv_usec = 1;
 
+    // select sockets for reading
     res = select(nfds + 1, &acs, nullptr, nullptr, &tv);
     if (res < 0)
     {
-        cerr << "select(): error " << LASTERROR() << endl;
+        cerr << "NET: select(): error " << LASTERROR() << endl;
     }
     else if (res == 0)
     {
@@ -151,42 +161,55 @@ void SessionManager::Update()
     std::set<SOCK> toremove;
     std::set<SOCK> toadd;
 
+    // go through active sockets
     for (SOCK sc : m_activeSockets)
     {
+        // if socket is set...
         if (FD_ISSET(sc, &acs))
         {
+            // if it's our socket, someone is at the door
             if (sc == m_socket)
             {
+                // try to accept the connection
                 sockaddr_in* addr = new sockaddr_in;
                 int addrlen = sizeof(sockaddr_in);
                 res = accept(m_socket, (sockaddr*)addr, (socklen_t*)&addrlen);
 
                 if (res > 0)
                 {
-                    cout << "Accepted connection!" << endl;
+                    INET_NTOP(AF_INET, &addr->sin_addr, tmpaddr, addrlen);
+                    cout << "NET: Accepted connection from " << tmpaddr << endl;
 
+                    // put to solver map
                     toadd.insert((SOCK)res);
                     FD_SET(res, &m_socketSet);
                     m_clientSolverMap[(SOCK)res] = new ClientSolver((SOCK)res);
 
-                    if (res > nfds)
+                    // increase nfds for select call
+                    if (res > (int)nfds)
                         nfds = res;
                 }
                 else
                 {
-                    cerr << "Error when accepting connection" << endl;
+                    cerr << "NET: Error when accepting connection" << endl;
                     delete addr;
                 }
             }
             else
             {
+                // receive what's on input
                 res = recv(sc, (char*)&pktheader, SMARTPACKET_HEADER_SIZE, 0);
+                // secure minimum length
                 if (res < SMARTPACKET_HEADER_SIZE)
                 {
                     if (res == -1 || LASTERROR() == SOCKETCONNRESET || LASTERROR() == SOCKETCONNABORT)
-                        cout << "Client disconnected" << endl;
+                        cout << "NET: Client disconnected" << endl;
                     else
-                        cerr << "Malformed packet received, disconnecting client" << endl;
+                        cerr << "NET: Malformed packet received, disconnecting client" << endl;
+
+                    // return work, if any - it now counts as undone
+                    if (m_clientSolverMap[sc]->GetMyWork() != CT_NONE)
+                        sSolveManager->returnWork(m_clientSolverMap[sc]->GetMyWork());
 
                     toremove.insert(sc);
                     m_clientSolverMap.erase(sc);
@@ -195,6 +218,7 @@ void SessionManager::Update()
                     continue;
                 }
 
+                // retrieve opcode and size
                 pktheader.opcode = ntohs(pktheader.opcode);
                 pktheader.size = ntohs(pktheader.size);
 
@@ -202,6 +226,7 @@ void SessionManager::Update()
                 {
                     int recbytes = 0;
 
+                    // receive while there's something to receive
                     while (recbytes != pktheader.size)
                     {
                         res = recv(sc, (char*)(_receiveBuffer + recbytes), pktheader.size - recbytes, 0);
@@ -209,7 +234,7 @@ void SessionManager::Update()
                         {
                             if (LASTERROR() == SOCKETWOULDBLOCK)
                                 continue;
-                            cerr << "Received less bytes than expected, not handling" << endl;
+                            cerr << "NET: Received less bytes than expected, not handling" << endl;
                             recbytes = -1;
                             break;
                         }
@@ -220,9 +245,11 @@ void SessionManager::Update()
                         continue;
                 }
 
+                // build packet
                 SmartPacket pkt(pktheader.opcode, pktheader.size);
                 pkt.SetData(_receiveBuffer, pktheader.size);
 
+                // handle it
                 m_clientSolverMap[sc]->HandlePacket(pkt);
             }
         }
@@ -234,4 +261,9 @@ void SessionManager::Update()
     // add newly accepted
     for (SOCK sc : toadd)
         m_activeSockets.insert(sc);
+}
+
+uint32_t SessionManager::GetClientCount()
+{
+    return (uint32_t)m_clientSolverMap.size();
 }

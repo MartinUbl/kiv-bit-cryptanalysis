@@ -14,6 +14,7 @@ void Solver_Atbas::Solve()
     char* result = new char[len + 1];
     result[len] = '\0';
 
+    // just decrypt using the only way
     for (size_t i = 0; i < len; i++)
     {
         if (msgptr[i] >= 'a' && msgptr[i] <= 'z')

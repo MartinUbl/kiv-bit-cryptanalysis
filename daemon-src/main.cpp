@@ -1,9 +1,12 @@
 #ifdef _WIN32
 #include <WS2tcpip.h>
 #endif
+
 #include "general.h"
 #include <cstring>
 #include <cstdio>
+
+#define INCOMING_BUFFER_SIZE 32
 
 #ifdef _WIN32
 #define SOCK SOCKET
@@ -45,6 +48,16 @@
 
 int main(int argc, char** argv)
 {
+    cout << "KIV/BIT, Cryptanalysis - daemon (slavemaster)" << endl;
+    cout << "Author: Martin Ubl (A13B0453P)" << endl << endl;
+
+    if (argc < 3)
+    {
+        cerr << "Invalid count of parameters" << endl;
+        cout << "Usage: " << argv[0] << " <bind address> <bind port>" << endl;
+        return 1;
+    }
+
     SOCK mysocket;
     sockaddr_in mysockAddr;
 
@@ -118,22 +131,26 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    cout << "Daemon is ready" << endl;
+
     fd_set sockset;
 
     FD_ZERO(&sockset);
     FD_SET(mysocket, &sockset);
 
-    char buffer[32];
+    char buffer[INCOMING_BUFFER_SIZE];
+    fd_set workset;
+    timeval tv;
 
     while (true)
     {
-        fd_set workset;
         memcpy(&workset, &sockset, sizeof(fd_set));
 
-        timeval tv;
+        // one second timeout
         tv.tv_sec = 1;
         tv.tv_usec = 1;
 
+        // silently sit on socket and wait for incoming connections
         int res = select(mysocket + 1, &workset, nullptr, nullptr, &tv);
         if (res < 0)
         {
@@ -151,9 +168,9 @@ int main(int argc, char** argv)
 
             if (remotesocket > 0)
             {
-                do
+                do // this loop is needed due to time gap between connection and actual data retrieval
                 {
-                    res = recv(remotesocket, buffer, 32, 0);
+                    res = recv(remotesocket, buffer, INCOMING_BUFFER_SIZE, 0);
 
                     if (res > 0)
                     {
@@ -174,6 +191,8 @@ int main(int argc, char** argv)
                         for (int i = 0; i < cnt; i++)
                         {
 #ifdef _WIN32
+                            // Win32 beautiful alternative for fork+execl
+                            // ... nasty
                             STARTUPINFO siStartupInfo;
                             PROCESS_INFORMATION piProcessInfo;
                             memset(&siStartupInfo, 0, sizeof(siStartupInfo));
@@ -184,6 +203,7 @@ int main(int argc, char** argv)
 
                             CreateProcess("kiv-bit-cryptanalysis-worker.exe", (LPSTR)cmdline.c_str(), 0, 0, false, 0, nullptr, nullptr, &siStartupInfo, &piProcessInfo);
 #else
+                            // wonderfully fork and exec new worker process
                             if (fork() == 0)
                                 execl("kiv-bit-cryptanalysis-worker", cmdbase.c_str(), backaddress.c_str(), backport.c_str());
 #endif

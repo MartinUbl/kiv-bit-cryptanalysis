@@ -8,6 +8,7 @@ DataHolder::DataHolder()
 
 void DataHolder::SetFrequencies(uint32_t alphabet_len, float* freqs)
 {
+    // store to internal fields
     m_frequencies = new float[alphabet_len];
     m_alphabetLength = alphabet_len;
 

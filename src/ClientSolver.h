@@ -10,7 +10,9 @@ class ClientSolver
     public:
         ClientSolver(SOCK mysocket);
 
+        // sends packet to client
         void SendPacket(SmartPacket &pkt);
+        // handles packet
         void HandlePacket(SmartPacket &pkt);
 
         void Handle_NULL(SmartPacket& pkt);
@@ -30,6 +32,7 @@ class ClientSolver
         SOCK m_mySocket;
 };
 
+// structure for packet handler
 struct HandlerStruct
 {
     // for now just method pointer
@@ -37,6 +40,7 @@ struct HandlerStruct
     void (ClientSolver::*handler)(SmartPacket&);
 };
 
+// packet handler to opcodes mapping
 static HandlerStruct _packetHandlers[] = {
     { &ClientSolver::Handle_NULL }, // GP_NONE
     { &ClientSolver::HandleHello }, // CP_HELLO

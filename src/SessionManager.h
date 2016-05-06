@@ -54,22 +54,35 @@ class SessionManager
     public:
         ~SessionManager();
 
+        // inits networking
         bool InitListener();
+        // updates sockets, reads what's on input and accepts pending connections
         void Update();
 
+        // sends packet to target socket
         void SendPacket(SmartPacket &pkt, SOCK targetSocket);
 
+        // retrieves connected client count
+        uint32_t GetClientCount();
+
     protected:
+        // protected singleton constructor
         SessionManager();
 
     private:
+        // our socket
         SOCK m_socket;
+        // our sockaddr
         sockaddr_in m_sockAddr;
 
+        // for select() call - highest socket number
         SOCK nfds;
 
+        // active sockets set
         fd_set m_socketSet;
         std::set<SOCK> m_activeSockets;
+
+        // solver map
         std::map<SOCK, ClientSolver*> m_clientSolverMap;
 };
 
